@@ -46,15 +46,32 @@ function validateFormData(data) {
   return null;
 }
 
-// POST routes for all four forms
+// Middleware to check DB connection before processing routes
+function checkDBConnection(req, res, next) {
+  if (!collections.after10th) {
+    return res.status(500).json({ error: "Database not connected yet. Please try again later." });
+  }
+  next();
+}
+
+// Apply checkDBConnection middleware for all POST /api routes
+app.use("/api", checkDBConnection);
+
+// POST route handlers
 
 app.post("/api/submit_after10th", async (req, res) => {
   const formData = req.body;
+  console.log("Received /submit_after10th:", formData); // Debug log
+
   const validationError = validateFormData(formData);
-  if (validationError) return res.status(400).json({ error: validationError });
+  if (validationError) {
+    console.log("Validation failed:", validationError);
+    return res.status(400).json({ error: validationError });
+  }
 
   try {
     const result = await collections.after10th.insertOne(formData);
+    console.log("Inserted After 10th document ID:", result.insertedId);
     res.status(201).json({ message: "After 10th form submitted successfully", id: result.insertedId });
   } catch (error) {
     console.error("❌ Error inserting After 10th data:", error);
@@ -64,6 +81,7 @@ app.post("/api/submit_after10th", async (req, res) => {
 
 app.post("/api/submit_after12th", async (req, res) => {
   const formData = req.body;
+
   const validationError = validateFormData(formData);
   if (validationError) return res.status(400).json({ error: validationError });
 
@@ -78,6 +96,7 @@ app.post("/api/submit_after12th", async (req, res) => {
 
 app.post("/api/submit_afterdegree", async (req, res) => {
   const formData = req.body;
+
   const validationError = validateFormData(formData);
   if (validationError) return res.status(400).json({ error: validationError });
 
@@ -92,11 +111,17 @@ app.post("/api/submit_afterdegree", async (req, res) => {
 
 app.post("/api/submit_examprep", async (req, res) => {
   const formData = req.body;
+  console.log("Received /submit_examprep:", formData);  // Debug log
+
   const validationError = validateFormData(formData);
-  if (validationError) return res.status(400).json({ error: validationError });
+  if (validationError) {
+    console.log("Validation failed:", validationError);
+    return res.status(400).json({ error: validationError });
+  }
 
   try {
     const result = await collections.examprep.insertOne(formData);
+    console.log("Inserted Exam Prep document ID:", result.insertedId);
     res.status(201).json({ message: "Exam Preparation form submitted successfully", id: result.insertedId });
   } catch (error) {
     console.error("❌ Error inserting Exam Prep data:", error);
@@ -107,6 +132,12 @@ app.post("/api/submit_examprep", async (req, res) => {
 // Health check route
 app.get("/", (req, res) => {
   res.send("🎉 Career Guidance API Server is running!");
+});
+
+// Global error handler (optional)
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error" });
 });
 
 // Start server only after connecting to DB
